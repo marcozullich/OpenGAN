@@ -1,6 +1,9 @@
 from turtle import back
 import torch
+import torchvision
 from torch.utils.data import DataLoader
+import os
+
 
 
 def get_backbone(class_, params_path:str, **kwargs):
@@ -18,8 +21,9 @@ def get_backbone(class_, params_path:str, **kwargs):
     ------------
     an instantiated pretrained model ready for extracting the features
     '''
-    net = class_(**kwargs)
-    net.load_state_dict(params_path)
+    net_class = getattr(torchvision.models, class_)
+    net = net_class(**kwargs)
+    net.load_state_dict(torch.load(params_path))
     return net
 
 def extract_features(backbone:torch.nn.Module, feats_module:str, dataset:torch.utils.data.Dataset, batch_size:int, ites:int=1, **kwargs):
@@ -41,16 +45,20 @@ def extract_features(backbone:torch.nn.Module, feats_module:str, dataset:torch.u
     '''
     features = []
     def feature_extractor(module, input_, output):
-        features.append (output)
+        features.append(output.cpu())
     getattr(backbone, feats_module).register_forward_hook(feature_extractor)
 
     loader = DataLoader(dataset, batch_size=batch_size, shuffle=False, **kwargs)
     backbone.eval()
+    backbone.cuda()
     for i in range(ites):
         print(f"Processing iteration {i+1}/{ites}...")
-        for j, data in enumerate(DataLoader):
-            if isinstance(data, tuple):
-                data = data[0] #disregard labels in this process
-            _ = backbone()
-    
+        with torch.no_grad():
+            for j, data in enumerate(loader):
+                print(f"Processing batch {j+1}/{len(loader)}")
+                if isinstance(data, (tuple, list)):
+                    data = data[0] #disregard labels in this process
+                data = data.cuda()
+                _ = backbone(data)
     return torch.cat(features, dim=0)
+
