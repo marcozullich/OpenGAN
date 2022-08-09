@@ -29,7 +29,9 @@ def load_args():
     parser.add_argument("--backbone_network_feats", type=str, choices=["resnet18", "resnet34", "resnet50", None], default=None, help="Backbone network for obtaining the features (default: None).")
     parser.add_argument("--backbone_network_params", type=str, default=None, help="Path to the state_dict containing the parameters for the pretrained backbone (default: None)")
     parser.add_argument("--folder_save_outputs", type=str, default=None, help="Folder where to save the outputs after discriminator evaluation (default: None).")
-    parser.add_argument("--save_hist_path", type=str, default="hist.png", help="Path where to save the histogram")
+    parser.add_argument("--save_hist_path", type=str, default="hist.png", help="Path where to save the histogram (default: hist.png).")
+    parser.add_argument("--swipe_increment", type=float, default=0.05, help="Calculation of performance: increment used for swiping the axis 0-1 in search of a threshold (default: 0.05).")
+    parser.add_argument("--save_performance_path", type=str, default="performance.csv", help="Path where to save the performance as a CSV file (default: performance.csv).")
     args = parser.parse_args()
     return args
 
@@ -47,23 +49,23 @@ def main():
     dataset_open = punches_data.get_dataset(args.openset_root, "bare") if args.openset_root is not None else None
     dataset_crops = punches_data.get_dataset(args.cropset_root, "bare") if args.cropset_root is not None else None
     dataset_random = datasets.BasicDataset(datasets.get_random_data([args.n_random_data] + list(dataset_valid[0][0].shape), args.seed_random_data))
-    valid_features = features.get_features(args.path_features_valid, args.force_feats_recalculation, dataset_valid, args.backbone_network_feats, args.backbone_network_params, args.batch_size, num_classes=20)
-    open_features = features.get_features(args.path_features_open, args.force_feats_recalculation, dataset_open, args.backbone_network_feats, args.backbone_network_params, args.batch_size, num_classes=20)
-    crops_features = features.get_features(args.path_features_crops, args.force_feats_recalculation, dataset_crops, args.backbone_network_feats, args.backbone_network_params, args.batch_size, num_classes=20)
-    train_features = features.get_features(args.path_features_train, False, None, args.backbone_network_feats, args.backbone_network_params, args.batch_size, num_classes=20)
-    random_features = features.get_features(args.path_features_random, args.force_feats_recalculation, dataset_random, args.backbone_network_feats, args.backbone_network_params, args.batch_size, num_classes=20)
+    valid_features = features.get_features(args.path_features_valid, args.force_feats_recalculation, dataset_valid, args.backbone_network_feats, args.backbone_network_params, args.batch_size, num_classes=20) if dataset_valid is not None else None
+    open_features = features.get_features(args.path_features_open, args.force_feats_recalculation, dataset_open, args.backbone_network_feats, args.backbone_network_params, args.batch_size, num_classes=20) if dataset_open is not None else None
+    crops_features = features.get_features(args.path_features_crops, args.force_feats_recalculation, dataset_crops, args.backbone_network_feats, args.backbone_network_params, args.batch_size, num_classes=20) if dataset_crops is not None else None
+    train_features = features.get_features(args.path_features_train, False, None, args.backbone_network_feats, args.backbone_network_params, args.batch_size, num_classes=20) if args.path_features_train is not None else None
+    random_features = features.get_features(args.path_features_random, args.force_feats_recalculation, dataset_random, args.backbone_network_feats, args.backbone_network_params, args.batch_size, num_classes=20) if args.n_random_data > 0 else None
 
-    trainloader = DataLoader(datasets.BasicDataset(train_features), batch_size=args.batch_size, shuffle=False, num_workers=4)
-    validloader = DataLoader(datasets.BasicDataset(valid_features), batch_size=args.batch_size, shuffle=False, num_workers=4)
-    openloader = DataLoader(datasets.BasicDataset(open_features), batch_size=args.batch_size, shuffle=False, num_workers=4)
-    cropsloader = DataLoader(datasets.BasicDataset(crops_features), batch_size=args.batch_size, shuffle=False, num_workers=4)
-    randomloader = DataLoader(datasets.BasicDataset(random_features), batch_size=args.batch_size, shuffle=False, num_workers=4)
+    trainloader = DataLoader(datasets.BasicDataset(train_features), batch_size=args.batch_size, shuffle=False, num_workers=4) if train_features is not None else None
+    validloader = DataLoader(datasets.BasicDataset(valid_features), batch_size=args.batch_size, shuffle=False, num_workers=4) if valid_features is not None else None
+    openloader = DataLoader(datasets.BasicDataset(open_features), batch_size=args.batch_size, shuffle=False, num_workers=4) if open_features is not None else None
+    cropsloader = DataLoader(datasets.BasicDataset(crops_features), batch_size=args.batch_size, shuffle=False, num_workers=4) if crops_features is not None else None
+    randomloader = DataLoader(datasets.BasicDataset(random_features), batch_size=args.batch_size, shuffle=False, num_workers=4) if random_features is not None else None
 
-    outs_train = testing.get_outputs(netD, trainloader).squeeze()
-    outs_valid = testing.get_outputs(netD, validloader).squeeze()
-    outs_open = testing.get_outputs(netD, openloader).squeeze()
-    outs_crops = testing.get_outputs(netD, cropsloader).squeeze()
-    outs_random = testing.get_outputs(netD, randomloader).squeeze()
+    outs_train = testing.get_outputs(netD, trainloader).squeeze() if trainloader is not None else None
+    outs_valid = testing.get_outputs(netD, validloader).squeeze() if validloader is not None else None
+    outs_open = testing.get_outputs(netD, openloader).squeeze() if openloader is not None else None
+    outs_crops = testing.get_outputs(netD, cropsloader).squeeze() if cropsloader is not None else None
+    outs_random = testing.get_outputs(netD, randomloader).squeeze() if randomloader is not None else None
 
     if (fold:=args.folder_save_outputs) is not None:
         os.makedirs(fold, exist_ok=True)
@@ -73,7 +75,12 @@ def main():
         torch.save(outs_crops, os.path.join(fold, "crops.pt"))
         torch.save(outs_random, os.path.join(fold, "random.pt")) 
 
-    testing.plot_hist(outs_train.detach().cpu().numpy(), outs_open.detach().cpu().numpy(), outs_valid.detach().cpu().numpy(), outs_crops.detach().cpu().numpy(), outs_random.detach().cpu().numpy(), args.save_hist_path, "Discriminator validation")
+    testing.plot_hist(outs_train, outs_open, outs_valid, outs_crops, outs_random, args.save_hist_path, "Discriminator validation")
+
+    perf = testing.get_performance(outs_valid, outs_open, outs_crops, increment=args.swipe_increment)
+    if (fold:=os.path.dirname(args.save_performance_path)) != "":
+        os.makedirs(fold, exist_ok=True)
+    perf.to_csv(args.save_performance_path)
     
 if __name__ == "__main__":
     main()
