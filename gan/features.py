@@ -62,3 +62,33 @@ def extract_features(backbone:torch.nn.Module, feats_module:str, dataset:torch.u
                 _ = backbone(data)
     return torch.cat(features, dim=0)
 
+def get_features(path_features:str, force_calculation:bool, dataset:str, backbone_class, backbone_params:str, batch_size:int, num_classes:int=None):
+    '''
+    Loads or calculates features produced by the backbone by evaluating the images contained in a specified dataset.
+
+    Params:
+    -------------
+    path_features: the path where the features are stored (in case of load) or to be saved (in case of calculation).
+    force_calculation: forces the (re)calculation of the features even if path_features already exists. For a first calculation of features + saving, set force_calculation to True.
+    dataset: the dataset.
+    backbone_class: the module class for the network.
+    backbone_params: the path to the parameters of the backbone to load.
+    batch_size: the batch size which will be used for passing the raw data to the backbone to produce the features.
+    num_classes: the number of classes in the dataset. If None, it will be inferred from the dataset.
+
+    Returns:
+    -------------
+    a torch Tensor containing the features
+    '''
+    if (load_path:=path_features) is not None and (not force_calculation):
+        assert os.path.isfile(load_path), f"The specified loading path for the training features {load_path} is not a file"
+        features = torch.load(load_path)
+    else:
+        num_classes = num_classes if num_classes is not None else len(dataset.classes)
+        backbone = get_backbone(backbone_class, backbone_params, num_classes=num_classes)
+        features = extract_features(backbone, "layer4", dataset, batch_size)
+        if (save_path:=path_features) is not None:
+            os.makedirs(os.path.dirname(save_path), exist_ok=True)
+            torch.save(features, save_path)
+            print(f"Train features saved at {save_path}")
+    return features

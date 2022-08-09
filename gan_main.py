@@ -35,7 +35,7 @@ def load_args():
 def check_args(args):
     if args.path_features_train is None or args.force_feats_recalculation:
         assert args.backbone_network_feats is not None and args.backbone_network_params is not None and args.trainset_root is not None, f"If --path_features_train is not specified, then all of --beckbone_network_feats, --backbone_network_params, and --trainset_root must be specified."
-
+  
 def main():
     args = load_args()
     print(args)
@@ -47,17 +47,19 @@ def main():
     netD.apply(architectures.weights_init)
 
     # OBTAIN THE FEATURES
-    if (load_path:=args.path_features_train) is not None and (not args.force_feats_recalculation):
-        assert os.path.isfile(load_path), f"The specified loading path for the training features {load_path} is not a file"
-        train_features = torch.load(load_path)
-    else:
-        dataset = punches_data.get_dataset(args.trainset_root, "bare")
-        backbone = features.get_backbone(args.backbone_network_feats, args.backbone_network_params, num_classes=len(dataset.classes))
-        train_features = features.extract_features(backbone, "layer4", dataset, args.batch_size_train)
-        if (save_path:=args.path_features_train) is not None:
-            os.makedirs(os.path.dirname(save_path), exist_ok=True)
-            torch.save(train_features, save_path)
-            print(f"Train features saved at {save_path}")
+    # if (load_path:=args.path_features_train) is not None and (not args.force_feats_recalculation):
+    #     assert os.path.isfile(load_path), f"The specified loading path for the training features {load_path} is not a file"
+    #     train_features = torch.load(load_path)
+    # else:
+    #     dataset = punches_data.get_dataset(args.trainset_root, "bare")
+    #     backbone = features.get_backbone(args.backbone_network_feats, args.backbone_network_params, num_classes=len(dataset.classes))
+    #     train_features = features.extract_features(backbone, "layer4", dataset, args.batch_size_train)
+    #     if (save_path:=args.path_features_train) is not None:
+    #         os.makedirs(os.path.dirname(save_path), exist_ok=True)
+    #         torch.save(train_features, save_path)
+    #         print(f"Train features saved at {save_path}")
+    dataset = punches_data.get_dataset(args.trainset_root, "bare") if args.trainset_root is not None else None
+    train_features = features.get_features(args.path_features_train, args.force_feats_recalculation, dataset, args.backbone_network_feats, args.backbone_network_params, args.batch_size_train)
     
     # PREPARE THE TRAINING
     trainloader = DataLoader(datasets.BasicDataset(train_features), batch_size=args.batch_size_train, shuffle=True, num_workers=4)

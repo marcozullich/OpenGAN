@@ -1,5 +1,7 @@
+import torch
 import torchvision
 from torchvision import transforms as T
+from typing import Collection
 
 TRANSFORM_TYPE = {
     "bare":T.Compose([
@@ -30,3 +32,5 @@ def get_dataset(root:str, transform_type:str="bare", **kwargs):
         **kwargs
     )
     return dataset
+
+

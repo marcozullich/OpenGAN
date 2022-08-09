@@ -10,28 +10,38 @@ def get_outputs(
     outputs = []
     device = next(discriminator.parameters()).device
     discriminator.eval()
-    for data in testloader:
-        outputs.append(discriminator(data.to(device)))
-    return torch.stack(outputs)
+    with torch.no_grad():
+        for data in testloader:
+            outputs.append(discriminator(data.to(device)))
+    return torch.cat(outputs)
 
 def plot_hist(
     outputs_train:torch.Tensor,
     outputs_ood:torch.Tensor,
     outputs_test:torch.Tensor,
+    outputs_crops:torch.Tensor,
+    outputs_random:torch.Tensor,
     save_path:str,
-    title_ood:str="OOD data",
     title:str=""
 ):  
-    os.makedirs(os.path.dirname(save_path), exist_ok=True)
+    if (folder:=os.path.dirname(save_path)) != "":
+        os.makedirs(folder, exist_ok=True)
     if outputs_train is not None:
-        plt.hist(outputs_train, label="training set", density=True, alpha=0.5)
-    if outputs_ood:
-        plt.hist(outputs_ood, label=title_ood, density=True, alpha=0.5)
-    if outputs_test:
-        plt.hist(outputs_test, label="test set", density=True, alpha=0.5)
+        plt.hist(outputs_train, label="train data", density=True, alpha=0.5)
+    if outputs_ood is not None:
+        plt.hist(outputs_ood, label="OOD data", density=True, alpha=0.5)
+    if outputs_test is not None:
+        plt.hist(outputs_test, label="validation data", density=True, alpha=0.5)
+    if outputs_crops is not None:
+        plt.hist(outputs_test, label="random crops", density=True, alpha=0.5)
+    if outputs_random is not None:
+        plt.hist(outputs_random, label="random data", density=True, alpha=0.5)
     plt.legend(loc='upper right')
     plt.title(title)
-    plt.savefig(save_path + ".png")
+    
+    if os.path.splitext(save_path)[1] != ".png":
+        save_path += ".png"
+    plt.savefig(save_path)
 
 def get_performance(
     outputs_train:torch.Tensor,
