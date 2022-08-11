@@ -1,5 +1,7 @@
 *.pt
 exp/
+gan_eval/
+gan_params/
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
