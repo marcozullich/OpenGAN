@@ -2,6 +2,7 @@
 exp/
 gan_eval/
 gan_params/
+.vscode/
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
