@@ -49,11 +49,11 @@ def main():
     dataset_open = punches_data.get_dataset(args.openset_root, "bare") if args.openset_root is not None else None
     dataset_crops = punches_data.get_dataset(args.cropset_root, "bare") if args.cropset_root is not None else None
     dataset_random = datasets.BasicDataset(datasets.get_random_data([args.n_random_data] + list(dataset_valid[0][0].shape), args.seed_random_data))
-    valid_features = features.get_features(args.path_features_valid, args.force_feats_recalculation, dataset_valid, args.backbone_network_feats, args.backbone_network_params, args.batch_size, num_classes=20) if dataset_valid is not None else None
-    open_features = features.get_features(args.path_features_open, args.force_feats_recalculation, dataset_open, args.backbone_network_feats, args.backbone_network_params, args.batch_size, num_classes=20) if dataset_open is not None else None
-    crops_features = features.get_features(args.path_features_crops, args.force_feats_recalculation, dataset_crops, args.backbone_network_feats, args.backbone_network_params, args.batch_size, num_classes=20) if dataset_crops is not None else None
-    train_features = features.get_features(args.path_features_train, False, None, args.backbone_network_feats, args.backbone_network_params, args.batch_size, num_classes=20) if args.path_features_train is not None else None
-    random_features = features.get_features(args.path_features_random, args.force_feats_recalculation, dataset_random, args.backbone_network_feats, args.backbone_network_params, args.batch_size, num_classes=20) if args.n_random_data > 0 else None
+    valid_features = features.get_features(args.path_features_valid, args.force_feats_recalculation, dataset_valid, args.backbone_network_feats, args.backbone_network_params, args.batch_size, num_classes=19) if dataset_valid is not None else None
+    open_features = features.get_features(args.path_features_open, args.force_feats_recalculation, dataset_open, args.backbone_network_feats, args.backbone_network_params, args.batch_size, num_classes=19) if dataset_open is not None else None
+    crops_features = features.get_features(args.path_features_crops, args.force_feats_recalculation, dataset_crops, args.backbone_network_feats, args.backbone_network_params, args.batch_size, num_classes=19) if dataset_crops is not None else None
+    train_features = features.get_features(args.path_features_train, False, None, args.backbone_network_feats, args.backbone_network_params, args.batch_size, num_classes=19) if args.path_features_train is not None else None
+    random_features = features.get_features(args.path_features_random, args.force_feats_recalculation, dataset_random, args.backbone_network_feats, args.backbone_network_params, args.batch_size, num_classes=19) if args.n_random_data > 0 else None
 
     trainloader = DataLoader(datasets.BasicDataset(train_features), batch_size=args.batch_size, shuffle=False, num_workers=4) if train_features is not None else None
     validloader = DataLoader(datasets.BasicDataset(valid_features), batch_size=args.batch_size, shuffle=False, num_workers=4) if valid_features is not None else None
